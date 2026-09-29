@@ -108,7 +108,27 @@ def attach_sequence(sender, instance, created, **kwargs):
 
             # Additionally, attach sequence number to instance as ref
             instance.ref = refval
-            instance.save(update_fields=['ref'])
+            
+            # Add ref prefix to subject if not already present
+            if hasattr(instance, 'subject') and not instance.subject.startswith(f"{refval} "):
+                subject = instance.subject
+
+                # If this is a Task belonging to a UserStory,
+                # append the UserStory subject.
+                if (
+                    sender.__name__ == "Task"
+                    and getattr(instance, "user_story", None)
+                ):
+                    subject = f"{subject} | {instance.user_story.subject}"
+
+                # Add ref prefix to subject if not already present.
+                if not subject.startswith(f"{refval} "):
+                    subject = f"{refval} {subject}"
+
+                instance.subject = subject
+                instance.save(update_fields=['ref', 'subject'])
+            else:
+                instance.save(update_fields=['ref'])
 
 
 # Project
